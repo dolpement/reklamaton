@@ -1,0 +1,350 @@
+import React, { useState, useEffect } from 'react';
+import './App.css';
+
+const App = () => {
+  const [currentView, setCurrentView] = useState('chats');
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [isInCall, setIsInCall] = useState(false);
+  const [callType, setCallType] = useState(null);
+  const [showCharacterBuilder, setShowCharacterBuilder] = useState(false);
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  const [droneStatus, setDroneStatus] = useState('disconnected');
+  const [isMuted, setIsMuted] = useState(false);
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  // Данные чатов с реальными людьми
+  const realPeople = [
+    { id: 1, name: 'Маргарита', lastMessage: 'Привет! Как дела?', time: '14:30', avatar: 'М', online: true },
+    { id: 2, name: 'Она', lastMessage: 'Увидимся завтра?', time: '13:45', avatar: 'О', online: true },
+    { id: 3, name: 'Дарья', lastMessage: 'Спасибо за помощь!', time: '12:20', avatar: 'Д', online: false },
+    { id: 4, name: 'Мира', lastMessage: 'Отличная идея!', time: '11:15', avatar: 'М', online: true },
+  ];
+
+  // Данные AI агентов
+  const aiAgents = [
+    { id: 'founder', name: 'Founder', description: 'Опытный предприниматель', emoji: '👨‍💼', character: 'business' },
+    { id: 'foundersha', name: 'Foundersha', description: 'Женщина-предприниматель', emoji: '👩‍💼', character: 'creative' },
+    { id: 'creeper', name: 'Крипер', description: 'Загадочный персонаж', emoji: '👾', character: 'mystery' },
+    { id: 'twinby', name: 'Twinby', description: 'Двойник с идеями', emoji: '👥', character: 'innovation' },
+  ];
+
+  // Интересы для конструктора характера
+  const interests = [
+    { id: 'sport', name: 'Спорт', emoji: '⚽', category: 'sport' },
+    { id: 'running', name: 'Бег', emoji: '🏃', category: 'sport' },
+    { id: 'swimming', name: 'Плавание', emoji: '🏊', category: 'sport' },
+    { id: 'yoga', name: 'Йога', emoji: '🧘', category: 'sport' },
+    { id: 'music', name: 'Музыка', emoji: '🎵', category: 'creative' },
+    { id: 'painting', name: 'Живопись', emoji: '🎨', category: 'creative' },
+    { id: 'photography', name: 'Фотография', emoji: '📸', category: 'creative' },
+    { id: 'dancing', name: 'Танцы', emoji: '💃', category: 'creative' },
+  ];
+
+  // Функция для API запросов к дрону с поддержкой потоковой передачи звука
+  const droneAPI = async (endpoint, character = null, streamUrl = null) => {
+    try {
+      setDroneStatus('connecting');
+      let url = `http://localhost:3001/api/drone/${endpoint}`;
+      
+      const params = new URLSearchParams();
+      if (character) {
+        params.append('character', character);
+      }
+      if (streamUrl) {
+        params.append('streamUrl', streamUrl);
+      }
+      
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
+      
+      const response = await fetch(url);
+      if (response.ok) {
+        setDroneStatus('connected');
+        console.log(`Drone ${endpoint} successful${streamUrl ? ' with stream: ' + streamUrl : ''}`);
+        return true;
+      } else {
+        setDroneStatus('disconnected');
+        console.log(`Drone ${endpoint} failed`);
+        return false;
+      }
+    } catch (error) {
+      setDroneStatus('disconnected');
+      console.log(`Drone ${endpoint} error:`, error);
+      return false;
+    }
+  };
+
+  // Начало звонка с потоковой передачей звука
+  const startCall = async (type, contact) => {
+    setCallType(type);
+    setIsInCall(true);
+    
+    // Автоматические запросы к дрону для всех звонков
+    await droneAPI('takeoff');
+    
+    // Генерируем уникальную ссылку на стрим звука для дрона
+    const streamUrl = `http://localhost:3001/stream/audio/${contact.id || contact.name}/${Date.now()}`;
+    console.log('Дрон заходит на ссылку со стримом звука:', streamUrl);
+    await droneAPI('audio', null, streamUrl);
+    
+    if (contact.character) {
+      // Для AI агентов - разворот по персонажу
+      await droneAPI('turn', contact.character);
+    } else {
+      // Для реальных людей - стандартный разворот
+      await droneAPI('turn', 'default');
+    }
+  };
+
+  // Завершение звонка
+  const endCall = () => {
+    setIsInCall(false);
+    setCallType(null);
+    setShowCharacterBuilder(false);
+    setSelectedInterests([]);
+    setDroneStatus('disconnected');
+  };
+
+  // Обработка звонка с AI агентом
+  const handleAICall = (agent, type) => {
+    setSelectedChat(agent);
+    setCallType(type);
+    setShowCharacterBuilder(true);
+  };
+
+  // Начало звонка с AI агентом после настройки характера
+  const startAICall = async () => {
+    setShowCharacterBuilder(false);
+    await startCall(callType, selectedChat);
+  };
+
+  // Переключение интересов
+  const toggleInterest = (interestId) => {
+    if (selectedInterests.includes(interestId)) {
+      setSelectedInterests(selectedInterests.filter(id => id !== interestId));
+    } else if (selectedInterests.length < 5) {
+      setSelectedInterests([...selectedInterests, interestId]);
+    }
+  };
+
+  // Рендер конструктора характера
+  const renderCharacterBuilder = () => (
+    <div className="character-builder-overlay">
+      <div className="character-builder">
+        <h2>Выберите интересы</h2>
+        
+        <div className="interests-section">
+          <h3>Спорт и активный отдых</h3>
+          <div className="interests-grid">
+            {interests.filter(i => i.category === 'sport').map(interest => (
+              <button
+                key={interest.id}
+                className={`interest-tag ${selectedInterests.includes(interest.id) ? 'selected' : ''}`}
+                onClick={() => toggleInterest(interest.id)}
+              >
+                {interest.emoji} {interest.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="interests-section">
+          <h3>Творчество и искусство</h3>
+          <div className="interests-grid">
+            {interests.filter(i => i.category === 'creative').map(interest => (
+              <button
+                key={interest.id}
+                className={`interest-tag ${selectedInterests.includes(interest.id) ? 'selected' : ''}`}
+                onClick={() => toggleInterest(interest.id)}
+              >
+                {interest.emoji} {interest.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="counter">{selectedInterests.length} из 5</div>
+        
+        <button className="start-call-btn" onClick={startAICall}>
+          Начать звонок
+        </button>
+      </div>
+    </div>
+  );
+
+  // Рендер интерфейса звонка
+  const renderCallInterface = () => (
+    <div className="call-interface">
+      <div className="call-avatar">
+        {selectedChat.emoji || selectedChat.avatar}
+      </div>
+      <h2>{selectedChat.name}</h2>
+      <p>{callType === 'video' ? 'Видеозвонок' : 'Голосовой звонок'}</p>
+      
+      <div className={`drone-status ${droneStatus}`}>
+        {droneStatus === 'connecting' && '🚁 Подключение дрона...'}
+        {droneStatus === 'connected' && '🚁 Дрон подключен к стриму'}
+        {droneStatus === 'disconnected' && 'Дрон не подключен'}
+      </div>
+
+      <div className="call-controls">
+        <button className="control-btn microphone" onClick={toggleMute}>
+          <img src={isMuted ? "/icons/mute.png" : "/icons/unmute.png"} alt="microphone" className="icon-button" />
+        </button>
+        <button className="control-btn end-call" onClick={endCall}>
+          <img src="/icons/phone.png" alt="end call" className="icon-button" />
+        </button>
+        <button className="control-btn camera">
+          <img src="/icons/camera.png" alt="camera" className="icon-button" />
+        </button>
+      </div>
+    </div>
+  );
+
+  // Рендер чата
+  const renderChat = () => (
+    <div className="chat-interface">
+      <div className="chat-header">
+        <button className="back-btn" onClick={() => setSelectedChat(null)}>←</button>
+        <div className="chat-info">
+          <div className="chat-avatar">{selectedChat.emoji || selectedChat.avatar}</div>
+          <div>
+            <h3>{selectedChat.name}</h3>
+            <p>{selectedChat.character ? 'AI Агент онлайн' : 'В сети'}</p>
+          </div>
+        </div>
+        <div className="chat-actions">
+          <button 
+            className="call-btn audio" 
+            onClick={() => selectedChat.character ? 
+              handleAICall(selectedChat, 'audio') : 
+              startCall('audio', selectedChat)
+            }
+          >
+            <img src="/icons/phone.png" alt="audio call" className="icon-button" />
+          </button>
+          <button 
+            className="call-btn video" 
+            onClick={() => selectedChat.character ? 
+              handleAICall(selectedChat, 'video') : 
+              startCall('video', selectedChat)
+            }
+          >
+            <img src="/icons/camera.png" alt="video call" className="icon-button" />
+          </button>
+        </div>
+      </div>
+
+      <div className="chat-messages">
+        <div className="message received">
+          <p>{selectedChat.character ? 
+            `Привет! Я ${selectedChat.name}. Как дела?` : 
+            selectedChat.lastMessage
+          }</p>
+          <span className="time">14:30</span>
+        </div>
+        <div className="message sent">
+          <p>Привет! {selectedChat.character ? 'Хочу поговорить с тобой!' : 'Отлично, спасибо!'}</p>
+          <span className="time">14:32</span>
+        </div>
+      </div>
+
+      <div className="chat-input">
+        <input type="text" placeholder="Напишите сообщение..." />
+        <button><img src="/icons/send.png" alt="send" className="icon-button" /></button>
+      </div>
+    </div>
+  );
+
+  // Рендер списка чатов
+  const renderChatsList = () => (
+    <div className="chats-list">
+      {realPeople.map(person => (
+        <div 
+          key={person.id} 
+          className="chat-item" 
+          onClick={() => setSelectedChat(person)}
+        >
+          <div className="chat-avatar">
+            {person.avatar}
+            {person.online && <div className="online-indicator"></div>}
+          </div>
+          <div className="chat-content">
+            <div className="chat-header-info">
+              <h3>{person.name}</h3>
+              <span className="time">{person.time}</span>
+            </div>
+            <p>{person.lastMessage}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Рендер списка AI агентов
+  const renderAIAgentsList = () => (
+    <div className="ai-agents-list">
+      {aiAgents.map(agent => (
+        <div key={agent.id} className="ai-agent-card">
+          <div className="agent-avatar">{agent.emoji}</div>
+          <h3>{agent.name}</h3>
+          <p>{agent.description}</p>
+          <button 
+            className="agent-chat-btn"
+            onClick={() => setSelectedChat(agent)}
+          >
+            Нажмите для начала чата
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Основной рендер
+  if (isInCall) {
+    return renderCallInterface();
+  }
+
+  if (showCharacterBuilder) {
+    return renderCharacterBuilder();
+  }
+
+  if (selectedChat) {
+    return renderChat();
+  }
+
+  return (
+    <div className="app">
+      <div className="app-header">
+        <h1>{currentView === 'chats' ? 'Чаты' : 'AI Агенты'}</h1>
+        <p>{currentView === 'chats' ? 'Ваши совпадения и беседы' : 'Выберите виртуального собеседника'}</p>
+      </div>
+
+      <div className="navigation">
+        <button 
+          className={`nav-btn ${currentView === 'chats' ? 'active' : ''}`}
+          onClick={() => setCurrentView('chats')}
+        >
+          Чаты
+        </button>
+        <button 
+          className={`nav-btn ${currentView === 'ai' ? 'active' : ''}`}
+          onClick={() => setCurrentView('ai')}
+        >
+          AI Агенты
+        </button>
+      </div>
+
+      <div className="content">
+        {currentView === 'chats' ? renderChatsList() : renderAIAgentsList()}
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
