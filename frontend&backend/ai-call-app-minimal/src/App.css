@@ -369,7 +369,6 @@ body {
   margin: 0 0 4px 0;
   font-size: 15px;
   line-height: 1.4;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .message.sent p {
@@ -1179,37 +1178,54 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: var(--twinby-light);
 }
 
 .message {
   max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 18px;
   position: relative;
   word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+}
+
+.message p {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 16px;
+  line-height: 1.4;
 }
 
 .message.sent {
   align-self: flex-end;
+}
+
+.message.sent p {
   background: var(--twinby-green);
   color: white;
-  border-bottom-right-radius: 6px;
+  border-bottom-right-radius: 4px;
 }
 
 .message.received {
   align-self: flex-start;
-  background: #F2F2F7;
-  color: var(--twinby-dark);
-  border-bottom-left-radius: 6px;
 }
 
-.message.error {
+.message.received p {
+  background: white;
+  color: var(--twinby-dark);
+  border-bottom-left-radius: 4px;
+  border: 1px solid #E0E0E0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.message.error p {
   background: #FFE5E5;
   color: #D32F2F;
   border: 1px solid #FFCDD2;
 }
 
-.message.typing {
+.message.typing p {
   background: #E8E8ED;
   animation: pulse 1.5s infinite;
 }
@@ -1219,16 +1235,11 @@ body {
   50% { opacity: 0.6; }
 }
 
-.message p {
-  margin: 0;
-  font-size: 16px;
-  line-height: 1.4;
-}
-
 .message .time {
   font-size: 12px;
   opacity: 0.7;
   margin-top: 4px;
+  padding: 0 16px;
   display: block;
 }
 
@@ -1307,4 +1318,150 @@ body {
   transform: translateY(-3px);
 }
 
+
+
+/* Video Stream Input Styles */
+.video-stream-input {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.url-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--twinby-dark);
+  font-size: 14px;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: var(--twinby-green);
+  box-shadow: 0 0 0 3px rgba(0, 220, 0, 0.1);
+}
+
+.url-input::placeholder {
+  color: #666;
+  font-size: 13px;
+}
+
+.fill-url-btn {
+  padding: 8px 16px;
+  background: var(--twinby-green);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fill-url-btn:hover {
+  background: var(--twinby-green-dark);
+  transform: translateY(-1px);
+}
+
+/* Video Container Updates */
+.video-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  margin: 20px auto;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.remote-video {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  background: #000;
+  border-radius: 12px;
+}
+
+.local-video {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 150px;
+  height: 100px;
+  border-radius: 8px;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+/* Call Interface Updates */
+.call-interface {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  color: white;
+  padding: 20px;
+}
+
+.call-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--twinby-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 220, 0, 0.3);
+}
+
+.call-interface h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.call-interface p {
+  font-size: 16px;
+  opacity: 0.8;
+  margin-bottom: 20px;
+}
+
+.drone-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.drone-status.connecting {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.drone-status.connected {
+  background: rgba(0, 220, 0, 0.2);
+  color: var(--twinby-green);
+  border: 1px solid rgba(0, 220, 0, 0.3);
+}
+
+.drone-status.disconnected {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
 

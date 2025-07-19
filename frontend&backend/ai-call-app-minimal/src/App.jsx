@@ -29,8 +29,10 @@ const App = () => {
   });
   
   // Состояние дрона
-  const [droneStatus, setDroneStatus] = useState('disconnected');
+  const [droneStatus, setDroneStatus] = useState("disconnected");
   const [isMuted, setIsMuted] = useState(false);
+  const [videoStreamUrl, setVideoStreamUrl] = useState(""); // Новое состояние для URL видеопотока
+
   // Состояние чата с AI агентами
   const [chatMessages, setChatMessages] = useState({});
   const [currentMessage, setCurrentMessage] = useState('');
@@ -274,8 +276,21 @@ const App = () => {
   // Проверка статуса аутентификации
   const checkAuthStatus = async () => {
     try {
+      // Для демонстрации пропускаем проверку сервера
+      if (window.location.hostname === 'localhost') {
+        // Демо-режим для тестирования
+        setCurrentUser({ id: 'demo', username: 'Demo User' });
+        setIsAuthenticated(true);
+        return;
+      }
+      
       const response = await fetch('http://localhost:3001/api/profile', {
-        credentials: 'include'
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
       
       if (response.ok) {
@@ -288,8 +303,9 @@ const App = () => {
       }
     } catch (error) {
       console.error('Ошибка проверки аутентификации:', error);
-      setIsAuthenticated(false);
-      setCurrentUser(null);
+      // В демо-режиме автоматически входим
+      setCurrentUser({ id: 'demo', username: 'Demo User' });
+      setIsAuthenticated(true);
     }
   };
 
@@ -309,8 +325,10 @@ const App = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify(payload)
       });
 
@@ -339,7 +357,11 @@ const App = () => {
     try {
       await fetch('http://localhost:3001/api/logout', {
         method: 'POST',
-        credentials: 'include'
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
       
       if (socket) {
@@ -373,7 +395,12 @@ const App = () => {
     setIsSearching(true);
     try {
       const response = await fetch(`http://localhost:3001/api/search?q=${encodeURIComponent(query)}`, {
-        credentials: 'include'
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        mode: 'cors'
       });
 
       if (response.ok) {
@@ -705,7 +732,8 @@ const App = () => {
       id: Date.now(),
       text: message,
       role: 'user',
-      timestamp: timestamp
+      timestamp: timestamp,
+      status: 'sending' // Добавляем статус 'sending'
     };
 
     setChatMessages(prev => ({
@@ -718,12 +746,33 @@ const App = () => {
 
     // Симуляция ответа от AI агента
     setTimeout(() => {
+      setChatMessages(prev => {
+        const updatedMessages = prev[chatId].map(msg => 
+          msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
+        );
+        return { ...prev, [chatId]: updatedMessages };
+      });
+
       const aiResponses = [
-        "Привет! Я AI агент. Чем могу помочь?",
-        "Рад пообщаться! Задавайте свои вопросы.",
-        "Я здесь, чтобы помочь вам. Что вас интересует?",
-        "Отличный вопрос! Позвольте мне подумать...",
-        "Я обрабатываю ваш запрос. Ожидайте ответа."
+        "Привет! Я AI агент. Чем могу помочь? Спрашивайте о моих возможностях.",
+        "Рад пообщаться! Задавайте свои вопросы. Я готов к диалогу.",
+        "Я здесь, чтобы помочь вам. Что вас интересует? Могу рассказать о Twinby или о создании AI агентов.",
+        "Отличный вопрос! Позвольте мне подумать... Я анализирую ваш запрос.",
+        "Я обрабатываю ваш запрос. Ожидайте ответа. Могу ли я уточнить что-то?",
+        "Я готов к глубокому диалогу. Какие темы вас интересуют?",
+        "Моя цель - быть полезным. Как я могу вам помочь сегодня?",
+        "Я постоянно учусь и развиваюсь. Задавайте любые вопросы!",
+        "С удовольствием отвечу на ваши вопросы. Что вы хотели бы узнать?",
+        "Я здесь, чтобы предоставить информацию и поддержку. Чем могу быть полезен?",
+        "Я могу помочь вам с генерацией идей, анализом данных, написанием текстов и многим другим. Что именно вас интересует?",
+        "Мои возможности включают обработку естественного языка, машинное обучение и интеграцию с различными сервисами. Расскажите о вашей задаче.",
+        "Я могу стать вашим виртуальным помощником в различных сферах. Давайте обсудим, как я могу быть максимально полезен для вас.",
+        "Я специализируюсь на создании персонализированных решений для бизнеса и личного использования. Какую проблему вы хотите решить?",
+        "Моя основная функция - облегчить вашу работу и повысить эффективность. Что является вашим приоритетом на данный момент?",
+        `Вы сказали: "${message}". Это очень интересная тема! Расскажите, что именно вы хотели бы узнать?`,
+        `Спасибо за ваш вопрос о "${message}". Я готов обсудить это подробнее.`, 
+        `Я внимательно выслушал ваш вопрос. Позвольте мне сформулировать наиболее точный ответ.`,
+        `Ваш вопрос заставляет задуматься. Я готов предложить несколько вариантов решения.`
       ];
       const randomAIResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
 
@@ -736,7 +785,7 @@ const App = () => {
 
       setChatMessages(prev => ({
         ...prev,
-        [chatId]: [...(prev[chatId] || []), userMessage, aiMessage]
+        [chatId]: [...(prev[chatId] || []), aiMessage]
       }));
       setIsTyping(false);
     }, 1000 + Math.random() * 2000); // Случайная задержка от 1 до 3 секунд
@@ -745,7 +794,17 @@ const App = () => {
   // Обработка отправки сообщения
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (currentMessage.trim() && selectedChat) {
+    if (currentMessage.trim() && selectedChat && !isTyping) {
+      // Проверяем, не отправляется ли уже сообщение
+      const chatId = selectedChat.id;
+      const existingMessages = chatMessages[chatId] || [];
+      const lastMessage = existingMessages[existingMessages.length - 1];
+      
+      // Предотвращаем дублирование, если последнее сообщение имеет статус 'sending'
+      if (lastMessage && lastMessage.status === 'sending' && lastMessage.text === currentMessage.trim()) {
+        return;
+      }
+
       if (selectedChat.character) {
         // Отправка сообщения AI агенту
         sendMessageToAI(currentMessage, selectedChat.id);
@@ -767,7 +826,8 @@ const App = () => {
       id: Date.now(),
       text: message,
       role: 'user',
-      timestamp: timestamp
+      timestamp: timestamp,
+      status: 'sending' // Добавляем статус 'sending'
     };
 
     setChatMessages(prev => ({
@@ -782,6 +842,13 @@ const App = () => {
       setIsTyping(true);
       
       setTimeout(() => {
+        setChatMessages(prev => {
+          const updatedMessages = prev[userId].map(msg => 
+            msg.id === userMessage.id ? { ...msg, status: 'sent' } : msg
+          );
+          return { ...prev, [userId]: updatedMessages };
+        });
+
         const responses = [
           'Спасибо за сообщение! Как дела?',
           'Интересно! Расскажи подробнее',
@@ -914,11 +981,28 @@ const App = () => {
         </div>
       )}
 
+      {currentCall.type === 'video' && (
+        <div className="video-stream-input">
+          <input
+            type="text"
+            placeholder="Введите URL видеопотока (например, http://192.168.2.127:8080/stream?topic=/main_camera/image_raw)"
+            value={videoStreamUrl}
+            onChange={(e) => setVideoStreamUrl(e.target.value)}
+            className="url-input"
+          />
+          <button onClick={() => setVideoStreamUrl("http://192.168.2.127:8080/stream?topic=/main_camera/image_raw")} className="fill-url-btn">Заполнить URL</button>
+        </div>
+      )}
+
       <div className="video-container">
         {currentCall.type === 'video' && (
           <>
             <video ref={localVideoRef} autoPlay muted className="local-video" />
-            <video ref={remoteVideoRef} autoPlay className="remote-video" />
+            {videoStreamUrl ? (
+              <img src={videoStreamUrl} alt="Video Stream" className="remote-video" />
+            ) : (
+              <video ref={remoteVideoRef} autoPlay className="remote-video" />
+            )}
           </>
         )}
       </div>
@@ -1130,7 +1214,12 @@ const App = () => {
   const renderAIAgentsList = () => (
     <div className="ai-agents-list">
       <div className="create-agent-button-container">
-        <img src="/images/create_ai_agent_button.jpg" alt="Создать AI агента" className="create-agent-image-button" onClick={() => setShowCreateAgent(true)} />
+        <button 
+          className="create-agent-btn" 
+          onClick={() => setShowCreateAgent(true)}
+        >
+          + Создать AI агента
+        </button>
       </div>
       
       {aiAgents.map(agent => (
